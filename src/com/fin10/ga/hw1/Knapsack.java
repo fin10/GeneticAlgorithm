@@ -36,6 +36,7 @@ public final class Knapsack {
 		try {
 			Knapsack s = new Knapsack("hw1.txt");
 			
+			// the roulette wheel selection
 			int bestOfBest = 0;
 			System.out.println("Roulette Wheel Selection");
 			System.out.print("#0 ");
@@ -54,6 +55,7 @@ public final class Knapsack {
 
 			System.out.println("the best of best:" + bestOfBest);
 			
+			// the tournament selection
 			bestOfBest = 0;
 			System.out.println("\nTournament Selection");
 			System.out.print("#0 ");
@@ -106,6 +108,7 @@ public final class Knapsack {
 		}
 	}
 	
+	// it generates chromosomes with random values.
 	public List<List<Boolean>> generatePopulation(int size) {
 		List<List<Boolean>> chromosomes = new ArrayList<>(size);
 		while (chromosomes.size() < size) {
@@ -120,6 +123,8 @@ public final class Knapsack {
 		return chromosomes;
 	}
 
+	// the roulette wheel selection
+	// it returns new chromosome list selected by the roulette wheel selection.
 	public List<List<Boolean>> doRouletteWheelSelection(List<List<Boolean>> chromosomes) {
 		int size = chromosomes.size();
 		List<Integer> scores = new ArrayList<>(size);
@@ -147,7 +152,9 @@ public final class Knapsack {
 		
 		return offsprings;
 	}
-	
+
+	// the tournament selection
+	// it returns new chromosome list selected by the tournament selection.
 	public List<List<Boolean>> doTournamentSelection(List<List<Boolean>> chromosomes) {
 		int size = chromosomes.size();
 		List<List<Boolean>> offsprings = new ArrayList<>(size);
@@ -163,6 +170,7 @@ public final class Knapsack {
 		return offsprings;
 	}
 	
+	// the crossover will be occurred in the prob probability.	
 	public  void doCrossover(List<List<Boolean>> chromosomes, float prob, int points) {
 		Collections.shuffle(chromosomes, mRandom);
 		
@@ -173,8 +181,9 @@ public final class Knapsack {
 				List<Boolean> mom = chromosomes.get(i);
 				List<Boolean> papa = chromosomes.get(i + size/2);
 				if (mom.equals(papa)) continue;
-				
+
 				while (points > 0) {
+					// calculates points to split chromosome.
 					startIdx += mRandom.nextInt(mom.size() - startIdx - points);
 					List<Boolean> tmp = new ArrayList<>(mom);
 					for (int j = startIdx; j < mom.size(); ++j) {
@@ -188,16 +197,20 @@ public final class Knapsack {
 		}
 	}
 	
+	// the mutation will be occurred in the prob probability.
 	public void doMutation(List<List<Boolean>> chromosomes, float prob) {
 		for (List<Boolean> chromosome : chromosomes) {
 			for (int i = 0; i < chromosome.size(); ++i) {
 				if (mRandom.nextFloat() <= prob) {
+					// inverts value.
 					chromosome.set(i, !chromosome.get(i));
 				}
 			}
 		}
 	}
 	
+	// it prints the average of profits and the best of profit in chromosomes.
+	// and it returns the best of profit.
 	public int printEvaluation(List<List<Boolean>> chromosomes) {
 		int best = 0;
 		long total = 0;
