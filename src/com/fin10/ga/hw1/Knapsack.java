@@ -35,38 +35,43 @@ public final class Knapsack {
 	public static void main(String[] args) {
 		try {
 			Knapsack s = new Knapsack("hw1.txt");
-
+			
+			int bestOfBest = 0;
 			System.out.println("Roulette Wheel Selection");
 			System.out.print("#0 ");
 			List<List<Boolean>> chromosomes = s.generatePopulation(POPULATION_SIZE);
 			s.printEvaluation(chromosomes);
 			
 			for (int i = 0; i < GENERATION_SIZE; ++i) {
-				List<Boolean> mom = s.doRouletteWheelSelection(chromosomes);
-				List<Boolean> papa = s.doRouletteWheelSelection(chromosomes);
-				List<Boolean> offspring = s.doCrossover(mom, papa, CROSSOVER_PROB, CROSSOVER_POINTS);
-				s.doMutation(offspring, MUTATION_PROB);
-				s.replace(chromosomes, offspring);
+				chromosomes = s.doRouletteWheelSelection(chromosomes);
+				s.doCrossover(chromosomes, CROSSOVER_PROB, CROSSOVER_POINTS);
+				s.doMutation(chromosomes, MUTATION_PROB);
 				
 				System.out.print("#" + (i+1) + " ");
-				s.printEvaluation(chromosomes);
+				int best = s.printEvaluation(chromosomes);
+				if (best > bestOfBest) bestOfBest = best;
 			}
 
+			System.out.println("the best of best:" + bestOfBest);
+			
+			bestOfBest = 0;
 			System.out.println("\nTournament Selection");
 			System.out.print("#0 ");
 			chromosomes = s.generatePopulation(POPULATION_SIZE);
 			s.printEvaluation(chromosomes);
 			
 			for (int i = 0; i < GENERATION_SIZE; ++i) {
-				List<Boolean> mom = s.doTournamentSelection(chromosomes);
-				List<Boolean> papa = s.doTournamentSelection(chromosomes);
-				List<Boolean> offspring = s.doCrossover(mom, papa, CROSSOVER_PROB, CROSSOVER_POINTS);
-				s.doMutation(offspring, MUTATION_PROB);
-				s.replace(chromosomes, offspring);
+				chromosomes = s.doTournamentSelection(chromosomes);
+				s.doCrossover(chromosomes, CROSSOVER_PROB, CROSSOVER_POINTS);
+				s.doMutation(chromosomes, MUTATION_PROB);
 				
 				System.out.print("#" + (i+1) + " ");
-				s.printEvaluation(chromosomes);
+				int best = s.printEvaluation(chromosomes);
+				if (best > bestOfBest) bestOfBest = best;
 			}
+			
+			System.out.println("the best of best:" + bestOfBest);
+			
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		}
@@ -115,76 +120,85 @@ public final class Knapsack {
 		return chromosomes;
 	}
 
-	public List<Boolean> doRouletteWheelSelection(List<List<Boolean>> chromosomes) {
-		int worst = getTotalProfit(getWorstChromosome(chromosomes));
-		int best = getTotalProfit(getBestChromosome(chromosomes));
-		if (worst == best) return chromosomes.get(mRandom.nextInt(chromosomes.size()));
-		
-		int pressure = (int) ((best - worst) / 4.f);
-
-		List<Integer> scores = new ArrayList<>(chromosomes.size());
+	public List<List<Boolean>> doRouletteWheelSelection(List<List<Boolean>> chromosomes) {
+		int size = chromosomes.size();
+		List<Integer> scores = new ArrayList<>(size);
 		for (List<Boolean> chromosome : chromosomes) {
-			int score = (getTotalProfit(chromosome) - worst) + pressure;
-			scores.add(score);
+			scores.add(getTotalProfit(chromosome));
 		}
 		
-		int total = 0;
+		long total = 0;
 		for (int score : scores) {
 			total += score;
 		}
-		
-		int point = mRandom.nextInt(total);
-		for (int i = 0, sum = 0; i < scores.size(); ++i) {
-			sum += scores.get(i);
-			if (point < sum) return chromosomes.get(i);
-		}
-		
-		return chromosomes.get(mRandom.nextInt(chromosomes.size()));
-	}
-	
-	public List<Boolean> doTournamentSelection(List<List<Boolean>> chromosomes) {
-		return chromosomes.get(mRandom.nextInt(chromosomes.size()));
-	}
-	
-	public List<Boolean> doCrossover(List<Boolean> mom, List<Boolean> papa, float prob, int points) {
-		if (mom.equals(papa)) return mom;
-		
-		if (mRandom.nextFloat() <= prob) {
-			int lastIdx = 0;
-			boolean swap = true;
-			List<Boolean> offspring = new ArrayList<>();
-			
-			while (points >= 0) {
-				int cut = points == 0 ? mItems.size() : 
-					lastIdx + Math.abs(mRandom.nextInt()) % (mItems.size() - lastIdx - points) + 1;
-				offspring.addAll((swap ? mom : papa).subList(lastIdx, cut));
-				
-				swap = !swap;
-				lastIdx = cut;
-				--points;
+
+		List<List<Boolean>> offsprings = new ArrayList<>(size);
+		while (offsprings.size() < size) {
+			long sum = 0;
+			long point = total <= 0 ? 0 : Math.abs(mRandom.nextLong()) % total;
+			for (int i = 0; i < size; ++i) {
+				sum += scores.get(i);
+				if (point <= sum) {
+					offsprings.add(new ArrayList<>(chromosomes.get(i)));
+					break;
+				}
 			}
-			
-			return offspring;
-		} else {
-			return new ArrayList<>(getTotalProfit(mom) < getTotalProfit(papa) ? papa : mom);
 		}
-	}
-	
-	public void doMutation(List<Boolean> chromosome, float prob) {
-		if (chromosome.isEmpty()) return;
 		
-		if (mRandom.nextDouble() <= prob) {
-			int index = mRandom.nextInt(chromosome.size());
-			chromosome.set(index, !chromosome.get(index));
+		return offsprings;
+	}
+	
+	public List<List<Boolean>> doTournamentSelection(List<List<Boolean>> chromosomes) {
+		int size = chromosomes.size();
+		List<List<Boolean>> offsprings = new ArrayList<>(size);
+		for (int i = 0; i < size; ++i) {
+			List<Boolean> opponent = chromosomes.get(mRandom.nextInt(size));
+			if (getTotalProfit(chromosomes.get(i)) < getTotalProfit(opponent)) {
+				offsprings.add(new ArrayList<>(opponent));
+			} else {
+				offsprings.add(new ArrayList<>(chromosomes.get(i)));
+			}
+		}
+		
+		return offsprings;
+	}
+	
+	public  void doCrossover(List<List<Boolean>> chromosomes, float prob, int points) {
+		Collections.shuffle(chromosomes, mRandom);
+		
+		int size = chromosomes.size();
+		for (int i = 0; i < size/2; ++i) {
+			if (mRandom.nextFloat() <= prob) {
+				int startIdx = 1;
+				List<Boolean> mom = chromosomes.get(i);
+				List<Boolean> papa = chromosomes.get(i + size/2);
+				if (mom.equals(papa)) continue;
+				
+				while (points > 0) {
+					startIdx += mRandom.nextInt(mom.size() - startIdx - points);
+					List<Boolean> tmp = new ArrayList<>(mom);
+					for (int j = startIdx; j < mom.size(); ++j) {
+						mom.set(j, papa.get(j));
+						papa.set(j, tmp.get(j));
+					}
+					
+					--points;
+				}
+			}
 		}
 	}
 	
-	public void replace(List<List<Boolean>> chromosomes, List<Boolean> offspring) {
-		List<Boolean> worst = getWorstChromosome(chromosomes);
-		Collections.copy(worst, offspring);
+	public void doMutation(List<List<Boolean>> chromosomes, float prob) {
+		for (List<Boolean> chromosome : chromosomes) {
+			for (int i = 0; i < chromosome.size(); ++i) {
+				if (mRandom.nextFloat() <= prob) {
+					chromosome.set(i, !chromosome.get(i));
+				}
+			}
+		}
 	}
 	
-	public void printEvaluation(List<List<Boolean>> chromosomes) {
+	public int printEvaluation(List<List<Boolean>> chromosomes) {
 		int best = 0;
 		long total = 0;
 		for (List<Boolean> chromosome : chromosomes) {
@@ -198,6 +212,7 @@ public final class Knapsack {
 		}
 		
 		System.out.println("avg:" + (float) total / chromosomes.size() + ", best:" + best);
+		return best;
 	}
 	
 	private int getTotalWeight(List<Boolean> chromosome) {
@@ -226,53 +241,5 @@ public final class Knapsack {
 		}
 		
 		return total;
-	}
-
-	private List<Boolean> getBestChromosome(List<List<Boolean>> chromosomes) {
-		if (chromosomes.isEmpty()) return Collections.emptyList();
-		
-		int best = 0;
-		int bestIdx = chromosomes.size()-1;
-		
-		int i = 0;
-		for (List<Boolean> chromosome : chromosomes) {
-			int weight = getTotalWeight(chromosome);
-			if (weight <= mCapacity) {
-				int profit = getTotalProfit(chromosome); 
-				if (best < profit) {
-					best = profit;
-					bestIdx = i;
-				}
-			}
-			
-			++i;
-		}
-		
-		return chromosomes.get(bestIdx);
-	}
-	
-	private List<Boolean> getWorstChromosome(List<List<Boolean>> chromosomes) {
-		if (chromosomes.isEmpty()) return Collections.emptyList();
-		
-		int worst = Integer.MAX_VALUE;
-		int worstIdx = chromosomes.size()-1;
-		
-		int i = 0;
-		for (List<Boolean> chromosome : chromosomes) {
-			int weight = getTotalWeight(chromosome);
-			if (weight > mCapacity) {
-				return chromosome;
-			}
-			
-			int profit = getTotalProfit(chromosome); 
-			if (worst > profit) {
-				worst = profit;
-				worstIdx = i;
-			}
-			
-			++i;
-		}
-		
-		return chromosomes.get(worstIdx);
 	}
 }
