@@ -116,11 +116,13 @@ public final class Knapsack {
 	}
 
 	public List<Boolean> doRouletteWheelSelection(List<List<Boolean>> chromosomes) {
-		List<Integer> scores = new ArrayList<>(chromosomes.size());
 		int worst = getTotalProfit(getWorstChromosome(chromosomes));
 		int best = getTotalProfit(getBestChromosome(chromosomes));
+		if (worst == best) return chromosomes.get(mRandom.nextInt(chromosomes.size()));
+		
 		int pressure = (int) ((best - worst) / 4.f);
 
+		List<Integer> scores = new ArrayList<>(chromosomes.size());
 		for (List<Boolean> chromosome : chromosomes) {
 			int score = (getTotalProfit(chromosome) - worst) + pressure;
 			scores.add(score);
@@ -132,15 +134,12 @@ public final class Knapsack {
 		}
 		
 		int point = mRandom.nextInt(total);
-		int sum = 0;
-		int i = 0;
-		for (int score : scores) {
-			sum += score;
+		for (int i = 0, sum = 0; i < scores.size(); ++i) {
+			sum += scores.get(i);
 			if (point < sum) return chromosomes.get(i);
-			++i;
 		}
 		
-		return chromosomes.get(chromosomes.size() - 1);
+		return chromosomes.get(mRandom.nextInt(chromosomes.size()));
 	}
 	
 	public List<Boolean> doTournamentSelection(List<List<Boolean>> chromosomes) {
@@ -148,6 +147,8 @@ public final class Knapsack {
 	}
 	
 	public List<Boolean> doCrossover(List<Boolean> mom, List<Boolean> papa, float prob, int points) {
+		if (mom.equals(papa)) return mom;
+		
 		if (mRandom.nextFloat() <= prob) {
 			int lastIdx = 0;
 			boolean swap = true;
