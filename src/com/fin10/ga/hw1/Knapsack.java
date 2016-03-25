@@ -35,10 +35,10 @@ public final class Knapsack {
 	public static void main(String[] args) {
 		try {
 			Knapsack s = new Knapsack("hw1.txt");
-			List<List<Boolean>> chromosomes = s.generatePopulation(POPULATION_SIZE);
 
 			System.out.println("Roulette Wheel Selection");
 			System.out.print("#0 ");
+			List<List<Boolean>> chromosomes = s.generatePopulation(POPULATION_SIZE);
 			s.printEvaluation(chromosomes);
 			
 			for (int i = 0; i < GENERATION_SIZE; ++i) {
@@ -51,9 +51,10 @@ public final class Knapsack {
 				System.out.print("#" + (i+1) + " ");
 				s.printEvaluation(chromosomes);
 			}
-			
+
 			System.out.println("\nTournament Selection");
 			System.out.print("#0 ");
+			chromosomes = s.generatePopulation(POPULATION_SIZE);
 			s.printEvaluation(chromosomes);
 			
 			for (int i = 0; i < GENERATION_SIZE; ++i) {
@@ -78,9 +79,9 @@ public final class Knapsack {
 		try {
 			in = new FileInputStream(fileName);
 			sc = new Scanner(in);
-			List<Item> items = new ArrayList<>();
 			mCapacity = sc.nextInt();
 			
+			List<Item> items = new ArrayList<>();
 			while (sc.hasNext()) {
 				int index = sc.nextInt();
 				int weight = sc.nextInt();
@@ -102,17 +103,13 @@ public final class Knapsack {
 	
 	public List<List<Boolean>> generatePopulation(int size) {
 		List<List<Boolean>> chromosomes = new ArrayList<>(size);
-		long max = (long) Math.pow(2, mItems.size());
-		
-		while (chromosomes.size() < size && chromosomes.size() < max) {
+		while (chromosomes.size() < size) {
 			List<Boolean> chromosome = new ArrayList<>(mItems.size());
 			for (int i = 0; i < mItems.size(); ++i) {
 				chromosome.add(mRandom.nextBoolean());
 			}
 			
-			if (!chromosomes.contains(chromosome)) {
-				chromosomes.add(chromosome);
-			}
+			chromosomes.add(chromosome);
 		}
 		
 		return chromosomes;
@@ -147,12 +144,26 @@ public final class Knapsack {
 	}
 	
 	public List<Boolean> doTournamentSelection(List<List<Boolean>> chromosomes) {
-		return Collections.emptyList();
+		return chromosomes.get(mRandom.nextInt(chromosomes.size()));
 	}
 	
 	public List<Boolean> doCrossover(List<Boolean> mom, List<Boolean> papa, float prob, int points) {
 		if (mRandom.nextFloat() <= prob) {
-			return Collections.emptyList();
+			int lastIdx = 0;
+			boolean swap = true;
+			List<Boolean> offspring = new ArrayList<>();
+			
+			while (points >= 0) {
+				int cut = points == 0 ? mItems.size() : 
+					lastIdx + Math.abs(mRandom.nextInt()) % (mItems.size() - lastIdx - points) + 1;
+				offspring.addAll((swap ? mom : papa).subList(lastIdx, cut));
+				
+				swap = !swap;
+				lastIdx = cut;
+				--points;
+			}
+			
+			return offspring;
 		} else {
 			return new ArrayList<>(getTotalProfit(mom) < getTotalProfit(papa) ? papa : mom);
 		}
@@ -185,12 +196,10 @@ public final class Knapsack {
 			}
 		}
 		
-		System.out.println("avg:" + (double) total / chromosomes.size() + ", best: " + best);
+		System.out.println("avg:" + (float) total / chromosomes.size() + ", best:" + best);
 	}
 	
 	private int getTotalWeight(List<Boolean> chromosome) {
-		if (mItems.size() != chromosome.size()) return 0;
-		
 		int total = 0;
 		int size = chromosome.size();
 		for (int i = 0; i < size; ++i) {
@@ -203,8 +212,6 @@ public final class Knapsack {
 	}
 
 	private int getTotalProfit(List<Boolean> chromosome) {
-		if (mItems.size() != chromosome.size()) return 0;
-		
 		int total = 0;
 		int weight = 0;
 		int size = chromosome.size();
