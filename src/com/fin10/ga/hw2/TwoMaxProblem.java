@@ -14,6 +14,7 @@ public class TwoMaxProblem {
 	private static final int CROSSOVER_POINTS = 1;
 	private static final float CROSSOVER_PROB = 1.f;
 	private static final float MUTATION_PROB = 0.01f;
+	private static final float TAU = 0.5f;
 
 	private final Random mRandom = new Random();
 
@@ -55,10 +56,10 @@ public class TwoMaxProblem {
 			}
 			
 			float fitness = Math.max(sumOfOne, sumOfZero);
-//			this.fitness = fitness;
-			float m = sharingMethod(population);
-			
-			this.fitness = m > 0.f ? fitness / m : fitness;
+			this.fitness = fitness;
+//			float m = sharingMethod(population);
+//			
+//			this.fitness = m > 0.f ? fitness / m : fitness;
 		}
 
 		public void invert(int index) {
@@ -87,18 +88,17 @@ public class TwoMaxProblem {
 			for (Individual individual : population) {
 				if (this == individual) continue;
 				
-				int distance = getHammingDistance(this, individual);
+				int distance = getHammingDistance(this.values, individual.values);
 				if (distance < D) sum += 1.f - distance/D;
 			}
 			
 			return sum;
-			
 		}
 		
-		private static int getHammingDistance(Individual individual1, Individual individual2) {
+		private static int getHammingDistance(int[] value1, int[] value2) {
 			int distance = 0;
-			for (int i = 0; i < individual1.size(); ++i) {
-				if (individual1.values[i] != individual2.values[i]) {
+			for (int i = 0; i < value1.length; ++i) {
+				if (value1[i] != value2[i]) {
 					++distance;
 				}
 			}
@@ -116,15 +116,32 @@ public class TwoMaxProblem {
 		printSummaryOfPopulation(population);
 		
 		for (int i = 0; i < GENERATION_COUNT; ++i) {
-			population = s.doTournamentSelection(population);
+			List<Individual> reserved = splitPopulation(population, TAU);
 			s.doCrossover(population, CROSSOVER_PROB, CROSSOVER_POINTS);
 			s.doMutation(population, MUTATION_PROB);
 
+			for (Individual individual : population) {
+				individual.calculateFitness(population);
+			}
+			
+			population = s.doTournamentReplacement(reserved, population);
+			
 			System.out.print(String.format("#%03d ", i+1));
 			printSummaryOfPopulation(population);
 		}
 		
 		printBestOfIndividuals(population, 100);
+	}
+
+	private static List<Individual> splitPopulation(List<Individual> population, float tau) {
+		List<Individual> pop = sort(population);
+		int count = (int) (population.size() * tau);
+		List<Individual> result = new ArrayList<>(count);
+		for (int i = 0; i < count; ++i) {
+			result.add(pop.get(i).duplicate());
+		}
+		
+		return result;
 	}
 
 	// it generates population with random values.
@@ -141,22 +158,16 @@ public class TwoMaxProblem {
 		return population;
 	}
 	
-	// the tournament selection
-	// it returns new population which includes individuals are selected by the tournament selection.
-	public List<Individual> doTournamentSelection(List<Individual> population) {
-		int size = population.size();
-		List<Individual> individuals = new ArrayList<>(size);
-		for (int i = 0; i < size; ++i) {
-			Individual individual = population.get(mRandom.nextInt(size));
+	private List<Individual> doTournamentReplacement(List<Individual> reserved, List<Individual> population) {
+		List<Individual> individuals = new ArrayList<>(reserved);
+		int count = population.size() - reserved.size();
+		for (int i = 0; i < count; ++i) {
+			Individual individual = population.get(mRandom.nextInt(population.size()));
 			if (population.get(i).fitness <= individual.fitness) {
 				individuals.add(individual.duplicate());
 			} else {
 				individuals.add(population.get(i).duplicate());
 			}
-		}
-		
-		for (Individual individual : individuals) {
-			individual.calculateFitness(individuals);
 		}
 		
 		return individuals;
@@ -216,6 +227,14 @@ public class TwoMaxProblem {
 	}
 	
 	private static void printBestOfIndividuals(List<Individual> population, int count) {
+		List<Individual> pop = sort(population);
+		
+		for (int i = 0; i < pop.size() && i < count; ++i) {
+			System.out.println(String.format("#%03d %s", i+1, pop.get(i)));
+		}
+	}
+	
+	private static List<Individual> sort(List<Individual> population) {
 		List<Individual> pop = new ArrayList<>(population);
 		
 		Collections.sort(pop, new Comparator<Individual>() {
@@ -227,9 +246,7 @@ public class TwoMaxProblem {
 		});
 		Collections.reverse(pop);
 		
-		for (int i = 0; i < pop.size() && i < count; ++i) {
-			System.out.println(String.format("#%03d %s", i+1, pop.get(i)));
-		}
+		return pop;
 	}
 	
 }
