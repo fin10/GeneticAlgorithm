@@ -6,7 +6,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
 
-public class TwoMaxProblem {
+public final class TwoMaxProblem {
 
 	private static final int POPULATION_SIZE = 100;
 	private static final int GENERATION_COUNT = 300;
@@ -25,6 +25,7 @@ public class TwoMaxProblem {
 		
 		private final int[] values = new int[LENGTH];
 		private float fitness = 0;
+		private float rawFitness = 0;
 
 		private Individual() {
 		}
@@ -55,19 +56,17 @@ public class TwoMaxProblem {
 				else if (value == 0) ++ sumOfZero;
 			}
 			
-			float fitness = Math.max(sumOfOne, sumOfZero);
-			this.fitness = fitness;
-//			float m = sharingMethod(population);
-//			
-//			this.fitness = m > 0.f ? fitness / m : fitness;
+			rawFitness = Math.max(sumOfOne, sumOfZero);
+			float m = sharingMethod(population);
+			fitness = m > 0.f ? rawFitness / m : rawFitness;
 		}
 
 		public void invert(int index) {
 			values[index] = values[index] == 1 ? 0 : 1;
 		}
 		
-		public int size() {
-			return values.length;
+		public static int size() {
+			return LENGTH;
 		}
 
 		@Override
@@ -79,6 +78,8 @@ public class TwoMaxProblem {
 			}
 			strBuilder.append("' fitness: ");
 			strBuilder.append(fitness);
+			strBuilder.append(" raw: ");
+			strBuilder.append(rawFitness);
 
 			return strBuilder.toString();
 		}
@@ -120,10 +121,6 @@ public class TwoMaxProblem {
 			s.doCrossover(population, CROSSOVER_PROB, CROSSOVER_POINTS);
 			s.doMutation(population, MUTATION_PROB);
 
-			for (Individual individual : population) {
-				individual.calculateFitness(population);
-			}
-			
 			population = s.doTournamentReplacement(reserved, population);
 			
 			System.out.print(String.format("#%03d ", i+1));
@@ -134,11 +131,20 @@ public class TwoMaxProblem {
 	}
 
 	private static List<Individual> splitPopulation(List<Individual> population, float tau) {
-		List<Individual> pop = sort(population);
+		List<Individual> copy = new ArrayList<>(population);
+		Collections.sort(copy, new Comparator<Individual>() {
+
+			@Override
+			public int compare(Individual o1, Individual o2) {
+				return Float.compare(o1.fitness, o2.fitness);
+			}
+		});
+		Collections.reverse(copy);
+		
 		int count = (int) (population.size() * tau);
 		List<Individual> result = new ArrayList<>(count);
 		for (int i = 0; i < count; ++i) {
-			result.add(pop.get(i).duplicate());
+			result.add(copy.get(i).duplicate());
 		}
 		
 		return result;
@@ -163,11 +169,15 @@ public class TwoMaxProblem {
 		int count = population.size() - reserved.size();
 		for (int i = 0; i < count; ++i) {
 			Individual individual = population.get(mRandom.nextInt(population.size()));
-			if (population.get(i).fitness <= individual.fitness) {
+			if (population.get(i).fitness < individual.fitness) {
 				individuals.add(individual.duplicate());
 			} else {
 				individuals.add(population.get(i).duplicate());
 			}
+		}
+		
+		for (Individual individual : individuals) {
+			individual.calculateFitness(individuals);
 		}
 		
 		return individuals;
@@ -187,8 +197,8 @@ public class TwoMaxProblem {
 
 				while (points > 0) {
 					// calculates points to split individual.
-					startIdx += mRandom.nextInt(mom.size() - startIdx - points);
-					for (int j = startIdx; j < mom.size(); ++j) {
+					startIdx += mRandom.nextInt(Individual.size() - startIdx - points);
+					for (int j = startIdx; j < Individual.size(); ++j) {
 						int tmp = mom.values[j];
 						mom.values[j] = papa.values[j];
 						papa.values[j] = tmp;
@@ -198,17 +208,25 @@ public class TwoMaxProblem {
 				}
 			}
 		}
+		
+		for (Individual individual : population) {
+			individual.calculateFitness(population);
+		}
 	}
 
 	// the mutation will be occurred in the prob probability.
 	private void doMutation(List<Individual> population, float prob) {
 		for (Individual individual : population) {
-			for (int i = 0; i < individual.size(); ++i) {
+			for (int i = 0; i < Individual.size(); ++i) {
 				if (mRandom.nextFloat() <= prob) {
 					// inverts value.
 					individual.invert(i);
 				}
 			}
+		}
+		
+		for (Individual individual : population) {
+			individual.calculateFitness(population);
 		}
 	}
 
@@ -217,8 +235,8 @@ public class TwoMaxProblem {
 		float best = 0;
 		
 		for (Individual individual : population) {
-			if (best < individual.fitness) best = individual.fitness;
-			avg += individual.fitness;
+			if (best < individual.rawFitness) best = individual.rawFitness;
+			avg += individual.rawFitness;
 		}
 		
 		avg /= population.size();
@@ -227,26 +245,19 @@ public class TwoMaxProblem {
 	}
 	
 	private static void printBestOfIndividuals(List<Individual> population, int count) {
-		List<Individual> pop = sort(population);
-		
-		for (int i = 0; i < pop.size() && i < count; ++i) {
-			System.out.println(String.format("#%03d %s", i+1, pop.get(i)));
-		}
-	}
-	
-	private static List<Individual> sort(List<Individual> population) {
-		List<Individual> pop = new ArrayList<>(population);
-		
-		Collections.sort(pop, new Comparator<Individual>() {
+		List<Individual> copy = new ArrayList<>(population);
+		Collections.sort(copy, new Comparator<Individual>() {
 
 			@Override
 			public int compare(Individual o1, Individual o2) {
-				return Float.compare(o1.fitness, o2.fitness);
+				return Float.compare(o1.rawFitness, o2.rawFitness);
 			}
 		});
-		Collections.reverse(pop);
-		
-		return pop;
+		Collections.reverse(copy);
+
+		List<Individual> result = copy.subList(0, count);
+		for (int i = 0; i < result.size() && i < count; ++i) {
+			System.out.println(String.format("#%03d %s", i+1, result.get(i)));
+		}
 	}
-	
 }
