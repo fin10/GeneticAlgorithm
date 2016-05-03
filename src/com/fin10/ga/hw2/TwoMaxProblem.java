@@ -77,10 +77,10 @@ public final class TwoMaxProblem {
 				strBuilder.append(value);
 			}
 			strBuilder.append("' fitness: ");
-			strBuilder.append(fitness);
-			strBuilder.append(" raw: ");
 			strBuilder.append(rawFitness);
-
+			strBuilder.append(" modified fitness: ");
+			strBuilder.append(fitness);
+			
 			return strBuilder.toString();
 		}
 		
@@ -127,24 +127,23 @@ public final class TwoMaxProblem {
 			printSummaryOfPopulation(population);
 		}
 		
-		printBestOfIndividuals(population, 100);
+		printBestOfIndividuals(population, 10);
 	}
 
 	private static List<Individual> splitPopulation(List<Individual> population, float tau) {
-		List<Individual> copy = new ArrayList<>(population);
-		Collections.sort(copy, new Comparator<Individual>() {
+		Collections.sort(population, new Comparator<Individual>() {
 
 			@Override
 			public int compare(Individual o1, Individual o2) {
 				return Float.compare(o1.fitness, o2.fitness);
 			}
 		});
-		Collections.reverse(copy);
+		Collections.reverse(population);
 		
 		int count = (int) (population.size() * tau);
 		List<Individual> result = new ArrayList<>(count);
 		for (int i = 0; i < count; ++i) {
-			result.add(copy.get(i).duplicate());
+			result.add(population.get(i).duplicate());
 		}
 		
 		return result;
@@ -245,17 +244,16 @@ public final class TwoMaxProblem {
 	}
 	
 	private static void printBestOfIndividuals(List<Individual> population, int count) {
-		List<Individual> copy = new ArrayList<>(population);
-		Collections.sort(copy, new Comparator<Individual>() {
+		Collections.sort(population, new Comparator<Individual>() {
 
 			@Override
 			public int compare(Individual o1, Individual o2) {
 				return Float.compare(o1.rawFitness, o2.rawFitness);
 			}
 		});
-		Collections.reverse(copy);
+		Collections.reverse(population);
 
-		List<Individual> result = copy.subList(0, count);
+		List<Individual> result = population.subList(0, count);
 		for (int i = 0; i < result.size() && i < count; ++i) {
 			System.out.println(String.format("#%03d %s", i+1, result.get(i)));
 		}
