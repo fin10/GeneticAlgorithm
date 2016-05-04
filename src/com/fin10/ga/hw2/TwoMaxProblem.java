@@ -30,6 +30,7 @@ public final class TwoMaxProblem {
 		private Individual() {
 		}
 
+		// create new individual randomly
 		public static Individual createInstance(Random random) {
 			Individual individual = new Individual();
 			for (int i = 0; i < individual.values.length; ++i) {
@@ -39,6 +40,7 @@ public final class TwoMaxProblem {
 			return individual;
 		}
 		
+		// duplicate itself
 		public Individual duplicate() {
 			Individual individual = new Individual();
 			for (int i = 0; i < values.length; ++i) {
@@ -48,7 +50,8 @@ public final class TwoMaxProblem {
 						
 			return individual;
 		}
-		
+
+		// calculate fitness with sharing method
 		public void calculateFitness(List<Individual> population) {
 			int sumOfOne = 0, sumOfZero = 0;
 			for (int value : values) {
@@ -61,6 +64,7 @@ public final class TwoMaxProblem {
 			fitness = m > 0.f ? rawFitness / m : rawFitness;
 		}
 
+		// invert special value for mutation
 		public void invert(int index) {
 			values[index] = values[index] == 1 ? 0 : 1;
 		}
@@ -84,6 +88,7 @@ public final class TwoMaxProblem {
 			return strBuilder.toString();
 		}
 		
+		// calculate sum of h(d)
 		private float sharingMethod(List<Individual> population) {
 			float sum = 0.f;
 			for (Individual individual : population) {
@@ -130,6 +135,7 @@ public final class TwoMaxProblem {
 		printBestOfIndividuals(population, 10);
 	}
 
+	// it splits population into tau ratio for overlap selection.
 	private static List<Individual> splitPopulation(List<Individual> population, float tau) {
 		Collections.sort(population, new Comparator<Individual>() {
 
@@ -163,6 +169,7 @@ public final class TwoMaxProblem {
 		return population;
 	}
 	
+	// it does tournament replacement. the reserved population will survive entirely. and the 'population' will enter the tournament.
 	private List<Individual> doTournamentReplacement(List<Individual> reserved, List<Individual> population) {
 		List<Individual> individuals = new ArrayList<>(reserved);
 		int count = population.size() - reserved.size();
